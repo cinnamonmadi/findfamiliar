@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sprite.hpp"
 #include <SDL2/SDL.h>
 
 const SDL_Color COLOR_WHITE = { .r = 255, .g = 255, .b = 255, .a = 255 };
@@ -19,3 +20,6 @@ void engine_clock_tick();
 void engine_render_clear();
 void engine_render_present();
 void engine_render_text(const char* text, SDL_Color color, int x, int y);
+void engine_render_sprite(Sprite sprite, int x, int y);
+void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y);
+void engine_render_animation(Animation animation, int x, int y);

@@ -7,8 +7,8 @@
 #include <iostream>
 
 // Constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 360;
+const int SCREEN_WIDTH = 160;
+const int SCREEN_HEIGHT = 144;
 const float FRAME_DURATION = 1.0f / 60.0f;
 
 // Engine variables
@@ -29,15 +29,22 @@ float dps = 0.0f;
 // Fonts
 TTF_Font* debug_font;
 
+// Textures
+SDL_Texture* sprite_texture[SPRITE_COUNT];
+int sprite_texture_width[SPRITE_COUNT];
+int sprite_texture_height[SPRITE_COUNT];
+
 bool engine_fonts_init();
 void engine_fonts_quit();
+bool engine_sprite_textures_init();
+void engine_sprite_textures_quit();
 
 // Engine init functions
 
 bool engine_init(int argc, char** argv) {
     bool init_fullscreened = false;
-    int resolution_width = SCREEN_WIDTH;
-    int resolution_height = SCREEN_HEIGHT;
+    int resolution_width = SCREEN_WIDTH * 4;
+    int resolution_height = SCREEN_HEIGHT * 4;
 
     // Parse system arguments
     for(int i = 1; i < argc; i++) {
@@ -99,11 +106,23 @@ bool engine_init(int argc, char** argv) {
         engine_toggle_fullscreen();
     }
 
-    if(!engine_fonts_init()) {
+    if(!engine_fonts_init() || !engine_sprite_textures_init()) {
         return false;
     }
 
     return true;
+}
+
+void engine_quit() {
+    engine_fonts_quit();
+    engine_sprite_textures_quit();
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+
+    TTF_Quit();
+    IMG_Quit();
+    SDL_Quit();
 }
 
 bool engine_fonts_init() {
@@ -116,19 +135,37 @@ bool engine_fonts_init() {
     return true;
 }
 
-void engine_quit() {
-    engine_fonts_quit();
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-
-    TTF_Quit();
-    IMG_Quit();
-    SDL_Quit();
-}
-
 void engine_fonts_quit() {
     TTF_CloseFont(debug_font);
+}
+
+bool engine_sprite_textures_init() {
+    for(int i = 0; i < SPRITE_COUNT; i++) {
+        SDL_Surface* loaded_surface = IMG_Load(sprite_data[i].path);
+        if(loaded_surface == NULL) {
+            std::cout << "Unable to load texture image! SDL Error: " << IMG_GetError() << std::endl;
+            return false;
+        }
+
+        sprite_texture[i] = SDL_CreateTextureFromSurface(renderer, loaded_surface);
+        if(sprite_texture[i] == NULL) {
+            std::cout << "Unable to create sprite texture! SDL Error: " << SDL_GetError() << std::endl;
+            return false;
+        }
+
+        sprite_texture_width[i] = loaded_surface->w;
+        sprite_texture_height[i] = loaded_surface->h;
+
+        SDL_FreeSurface(loaded_surface);
+    }
+
+    return true;
+}
+
+void engine_sprite_textures_quit() {
+    for(int i = 0; i < SPRITE_COUNT; i++) {
+        SDL_DestroyTexture(sprite_texture[i]);
+    }
 }
 
 void engine_set_resolution(int width, int height) {
@@ -208,4 +245,30 @@ void engine_render_text(const char* text, SDL_Color color, int x, int y) {
 
     SDL_FreeSurface(text_surface);
     SDL_DestroyTexture(text_texture);
+}
+
+void engine_render_sprite(Sprite sprite, int x, int y) {
+    engine_render_sprite_frame(sprite, 0, x, y);
+}
+
+void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y) {
+    int frame_long_x = sprite_data[sprite].frame_size[0] * frame;
+    SDL_Rect source_rect = (SDL_Rect) {
+        .x = frame_long_x % sprite_texture_width[sprite],
+        .y = frame_long_x / sprite_texture_height[sprite],
+        .w = sprite_data[sprite].frame_size[0],
+        .h = sprite_data[sprite].frame_size[1]
+    };
+    SDL_Rect dest_rect = (SDL_Rect) {
+        .x = x,
+        .y = y,
+        .w = source_rect.w,
+        .h = source_rect.h
+    };
+
+    SDL_RenderCopy(renderer, sprite_texture[sprite], &source_rect, & dest_rect);
+}
+
+void engine_render_animation(Animation animation, int x, int y) {
+    engine_render_sprite_frame(animation.sprite, animation.frame, x, y);
 }
