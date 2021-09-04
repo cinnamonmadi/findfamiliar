@@ -3,16 +3,13 @@
 #include <cmath>
 #include <iostream>
 
-const int PLAYER_SPEED = 100;
+const int PLAYER_ACTOR = 0;
 const vec2 directions[4] = {
     vec2(0, -1),
     vec2(1, 0),
     vec2(0, 1),
     vec2(-1, 0),
 };
-
-const vec2 VEC2_ZERO = vec2(0, 0);
-const vec2 VEC2_NULL = vec2(-1, -1);
 
 Map::Map() {
     tile_width = 10;
@@ -33,7 +30,11 @@ Map::Map() {
         }
     }
 
-    actor_init(&player, SPRITE_PLAYER, 5, 2);
+    actor_count = 0;
+    actor_init(SPRITE_PLAYER, 5, 2);
+
+    vec2 path[2] = { vec2(3, 6), vec2(6, 6) };
+    npc_init(SPRITE_PLAYER, 6, 6, path, 2);
 }
 
 Map::~Map() {
@@ -49,49 +50,116 @@ bool Map::is_tile_free(const vec2& tile) const {
     if(tile.x < 0 || tile.x >= tile_width || tile.y < 0 || tile.y >= tile_height) {
         return false;
     }
+    for(int i = 0; i < actor_count; i++) {
+        if(actors[i].target.is_null()) {
+            vec2 position_tile = tile_at(actors[i].position);
+            if(position_tile.equals(tile)) {
+                return false;
+            }
+        } else {
+            int actor_direction = actors[i].position.direction_to(actors[i].target);
+            vec2 target_tile = tile_at(actors[i].target);
+            vec2 last_tile = target_tile - directions[actor_direction];
+            if(target_tile.equals(tile) || last_tile.equals(tile)) {
+                return false;
+            }
+        }
+    }
     return !walls[tile.y][tile.x];
 }
 
-void Map::update(float delta, int player_input_direction) {
-    actor_move_in_direction(player, player_input_direction, delta);
+void Map::update(int player_input_direction) {
+    update_move_player(player_input_direction);
+    for(int i = 0; i < npc_count; i++) {
+        npc_move(npcs[i]);
+    }
 }
 
-void Map::actor_init(Actor* actor, Sprite sprite, int x, int y) {
-    *actor = (Actor) {
+void Map::update_move_player(int player_input_direction) {
+    Actor& player_actor = actors[PLAYER_ACTOR];
+
+    actor_move(player_actor);
+
+    if(player_actor.target.is_null() && player_input_direction != -1) {
+        vec2 next_tile = tile_at(player_actor.position) + directions[player_input_direction];
+        if(is_tile_free(next_tile)) {
+            player_actor.target = position_of(next_tile);
+        }
+    }
+}
+
+int Map::actor_init(Sprite sprite, int x, int y) {
+    if(actor_count == MAX_ACTORS) {
+        std::cout << "Cannot create new actor! Max actor count has been reached!" << std::endl;
+        return -1;
+    }
+
+    int actor_index = actor_count;
+    actors[actor_index] = (Actor) {
         .sprite = sprite,
         .position = position_of(vec2(x, y)),
-        .target = vec2(-1, -1)
+        .target = vec2_null()
     };
+    actor_count++;
+
+    return actor_index;
 }
 
-void Map::actor_move_in_direction(Actor& actor, int input_direction, float delta) {
-    if(!actor.target.equals(VEC2_NULL)) {
-        int move_direction = actor.position.direction_to(actor.target);
-        vec2 step = directions[move_direction] * (PLAYER_SPEED * delta);
+void Map::actor_move(Actor& actor) {
+    if(actor.target.is_null()) {
+        return;
+    }
 
-        bool reached_target = step.manhatten_length() >= actor.position.manhatten_distance_to(actor.target);
-        if(!reached_target || input_direction != move_direction) {
-            actor.position = actor.position + step;
-        } else {
-            actor.position = actor.target;
-        }
+    int move_direction = actor.position.direction_to(actor.target);
+    vec2 step = directions[move_direction];
+    actor.position = actor.position + step;
 
-        if(reached_target) {
-            if(input_direction == -1) {
-                actor.target = VEC2_NULL;
-            } else {
-                vec2 next_target_tile = tile_at(actor.target) + directions[input_direction];
-                if(is_tile_free(next_target_tile)) {
-                    actor.target = position_of(next_target_tile);
-                }
+    if(actor.position.equals(actor.target)) {
+        actor.target = vec2_null();
+    }
+}
+
+int Map::npc_init(Sprite sprite, int x, int y, const vec2* path, int path_length) {
+    if(npc_count == MAX_NPCS) {
+        std::cout << "Cannot create new NPC! Max NPC count has been reached!" << std::endl;
+        return -1;
+    }
+
+    int npc_index = npc_count;
+    npcs[npc_index].actor = actor_init(sprite, x, y);
+    npcs[npc_index].path_index = 0;
+    npcs[npc_index].path_length = path_length;
+    for(int i = 0; i < path_length; i++) {
+        npcs[npc_index].path[i] = position_of(path[i]);
+    }
+    npc_count++;
+
+    return npc_index;
+}
+
+void Map::npc_move(NPC& npc) {
+    if(npc.path_length == 0) {
+        return;
+    }
+
+    // Move the actor
+    Actor& npc_actor = actors[npc.actor];
+    actor_move(npc_actor);
+
+    if(npc_actor.target.is_null()) {
+        // Check to see if we've reached the next path node
+        if(npc_actor.position.equals(npc.path[npc.path_index])) {
+            npc.path_index++;
+            if(npc.path_index == npc.path_length) {
+                npc.path_index -= 2;
             }
         }
-    } else {
-        if(input_direction != -1) {
-            vec2 next_target_tile = tile_at(actor.position) + directions[input_direction];
-            if(is_tile_free(next_target_tile)) {
-                actor.target = position_of(next_target_tile);
-            }
+
+        // Try to move to the next tile along our path
+        int target_direction = npc_actor.position.direction_to(npc.path[npc.path_index]);
+        vec2 next_tile = tile_at(npc_actor.position) + directions[target_direction];
+        if(is_tile_free(next_tile)) {
+            npc_actor.target = position_of(next_tile);
         }
     }
 }
@@ -102,4 +170,13 @@ vec2 tile_at(vec2 point) {
 
 vec2 position_of(vec2 tile) {
     return vec2(tile.x * TILE_SIZE, tile.y * TILE_SIZE);
+}
+
+bool intersects_tile(const vec2& point, const vec2& tile) {
+    vec2 rect_size = vec2(TILE_SIZE, TILE_SIZE);
+    vec2 tile_pos = position_of(tile);
+    return !(point.x + rect_size.x <= tile_pos.x ||
+             tile_pos.x + rect_size.x <= point.x ||
+             point.y + rect_size.y <= tile_pos.y ||
+             tile_pos.y + rect_size.y <= point.y);
 }

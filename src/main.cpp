@@ -71,7 +71,7 @@ void input() {
 }
 
 void update() {
-    map.update(delta, player_input_direction);
+    map.update(player_input_direction);
 }
 
 void render() {
@@ -90,5 +90,7 @@ void render_map() {
         }
     }
 
-    engine_render_sprite(map.player.sprite, map.player.position.x, map.player.position.y);
+    for(int i = 0; i < map.actor_count; i++) {
+        engine_render_sprite(map.actors[i].sprite, map.actors[i].position.x, map.actors[i].position.y);
+    }
 }
