@@ -132,10 +132,11 @@ int Map::actor_init(Sprite sprite, int x, int y) {
 
     int actor_index = actor_count;
     actors[actor_index] = (Actor) {
-        .sprite = sprite,
+        .facing_direction = 2,
         .position = position_of(vec2(x, y)),
         .target = vec2_null()
     };
+    actors[actor_index].animation = Animation(sprite, 10);
     actor_count++;
 
     return actor_index;
@@ -143,6 +144,7 @@ int Map::actor_init(Sprite sprite, int x, int y) {
 
 void Map::actor_move(Actor& actor) {
     if(actor.target.is_null()) {
+        actor.animation.reset();
         return;
     }
 
@@ -153,6 +155,9 @@ void Map::actor_move(Actor& actor) {
     if(actor.position.equals(actor.target)) {
         actor.target = vec2_null();
     }
+
+    actor.facing_direction = move_direction;
+    actor.animation.update();
 }
 
 int Map::npc_init(Sprite sprite, int x, int y, const vec2* path, int path_length) {

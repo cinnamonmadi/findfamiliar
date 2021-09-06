@@ -6,45 +6,42 @@ SpriteData sprite_data[SPRITE_COUNT] = {
     (SpriteData) {
         .path = "./res/gfx/font.png",
         .frame_size = { 8, 8 },
-        .frame_count = 0,
-        .fps = 1
     },
     (SpriteData) {
         .path = "./res/gfx/frame.png",
         .frame_size = { 8, 8 },
-        .frame_count = 0,
-        .fps = 1
     },
     (SpriteData) {
         .path = "./res/gfx/tiles.png",
         .frame_size = { TILE_SIZE, TILE_SIZE },
-        .frame_count = 0,
-        .fps = 1
     },
     (SpriteData) {
         .path = "./res/gfx/witch.png",
         .frame_size = { TILE_SIZE, TILE_SIZE },
-        .frame_count = 0,
-        .fps = 1
     }
 };
+int sprite_frame_count[SPRITE_COUNT];
 
-Animation::Animation(Sprite sprite) {
+Animation::Animation(Sprite sprite, int frame_duration) {
     this->sprite = sprite;
-    frame = 0;
-    timer = 0;
-    frame_duration = 1.0f / sprite_data[sprite].fps;
+    this->frame_duration = frame_duration;
+    reset();
 }
 
-void Animation::update(float delta) {
-    timer += delta;
+void Animation::update() {
+    timer++;
 
-    if(timer >= frame_duration) {
+    if(timer == frame_duration) {
         frame++;
         timer -= frame_duration;
 
-        if(frame == sprite_data[sprite].frame_count) {
+        if(frame == sprite_frame_count[sprite]) {
             frame = 0;
         }
     }
+}
+
+void Animation::reset() {
+    frame = 0;
+    timer = 0;
 }

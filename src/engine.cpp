@@ -131,6 +131,7 @@ bool engine_sprite_textures_init() {
 
         sprite_texture_width[i] = loaded_surface->w;
         sprite_texture_height[i] = loaded_surface->h;
+        sprite_frame_count[i] = loaded_surface->w / sprite_data[i].frame_size[0];
 
         SDL_FreeSurface(loaded_surface);
     }
@@ -199,7 +200,7 @@ void engine_render_text(const char* text, int x, int y) {
     int index = 0;
     while(text[index] != '\0') {
         int letter_index = (int)(text[index] - ' ');
-        engine_render_sprite_frame(SPRITE_FONT, letter_index, x + (index * 8), y);
+        engine_render_sprite_frame(SPRITE_FONT, letter_index, x + (index * 8), y, false);
         index++;
     }
 }
@@ -228,15 +229,15 @@ void engine_render_dialog(char* dialog_rows[2], size_t dialog_display_length) {
             const int render_y = base_y + (y * 8);
 
             if(frame != 4) {
-                engine_render_sprite_frame(SPRITE_UI_FRAME, frame, render_x, render_y);
+                engine_render_sprite_frame(SPRITE_UI_FRAME, frame, render_x, render_y, false);
             } else {
                 const int row = y - 1;
                 const int col = x - 1;
                 const size_t index = (row * row_length) + col;
                 if(index < dialog_display_length) {
-                    engine_render_sprite_frame(SPRITE_FONT, (int)(dialog_rows[row][col] - ' '), render_x, render_y);
+                    engine_render_sprite_frame(SPRITE_FONT, (int)(dialog_rows[row][col] - ' '), render_x, render_y, false);
                 } else {
-                    engine_render_sprite_frame(SPRITE_FONT, 0, render_x, render_y);
+                    engine_render_sprite_frame(SPRITE_FONT, 0, render_x, render_y, false);
                 }
             }
         }
@@ -244,10 +245,10 @@ void engine_render_dialog(char* dialog_rows[2], size_t dialog_display_length) {
 }
 
 void engine_render_sprite(Sprite sprite, int x, int y) {
-    engine_render_sprite_frame(sprite, 0, x, y);
+    engine_render_sprite_frame(sprite, 0, x, y, false);
 }
 
-void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y) {
+void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y, bool flipped) {
     int frame_long_x = sprite_data[sprite].frame_size[0] * frame;
     SDL_Rect source_rect = (SDL_Rect) {
         .x = frame_long_x % sprite_texture_width[sprite],
@@ -262,9 +263,27 @@ void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y) {
         .h = source_rect.h
     };
 
-    SDL_RenderCopy(renderer, sprite_texture[sprite], &source_rect, & dest_rect);
+    SDL_RendererFlip flip;
+    if(flipped) {
+        flip = SDL_FLIP_HORIZONTAL;
+    } else {
+        flip = SDL_FLIP_NONE;
+    }
+
+    SDL_RenderCopyEx(renderer, sprite_texture[sprite], &source_rect, &dest_rect, 0, NULL, flip);
 }
 
 void engine_render_animation(Animation animation, int x, int y) {
-    engine_render_sprite_frame(animation.sprite, animation.frame, x, y);
+    engine_render_sprite_frame(animation.sprite, animation.frame, x, y, false);
+}
+
+void engine_render_actor_animation(Animation animation, int direction, int x, int y) {
+    int frame = animation.frame;
+    if(direction == 0) {
+        frame += sprite_frame_count[animation.sprite];
+    } else if(direction == 1 || direction == 3) {
+        frame += sprite_frame_count[animation.sprite] * 2;
+    }
+
+    engine_render_sprite_frame(animation.sprite, frame, x, y, direction == 3);
 }

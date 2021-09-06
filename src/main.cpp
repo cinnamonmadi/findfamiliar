@@ -120,13 +120,13 @@ void render_map() {
     for(int y = 0; y < draw_size.y; y++) {
         for(int x = 0; x < draw_size.x; x++) {
             vec2 render_pos = base_render_pos + vec2(x * TILE_SIZE, y * TILE_SIZE);
-            engine_render_sprite_frame(SPRITE_TILES, map.tiles[start_tile.y + y][start_tile.x + x], render_pos.x, render_pos.y);
+            engine_render_sprite_frame(SPRITE_TILES, map.tiles[start_tile.y + y][start_tile.x + x], render_pos.x, render_pos.y, false);
         }
     }
 
     for(int i = 0; i < map.actor_count; i++) {
         vec2 render_pos = map.actors[i].position - map.camera_position;
-        engine_render_sprite(map.actors[i].sprite, render_pos.x, render_pos.y);
+        engine_render_actor_animation(map.actors[i].animation, map.actors[i].facing_direction, render_pos.x, render_pos.y);
     }
 }
 

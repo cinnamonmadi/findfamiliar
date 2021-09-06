@@ -11,19 +11,25 @@ typedef enum Sprite {
 typedef struct SpriteData {
     const char* path;
     const int frame_size[2];
-    int frame_count;
-    const int fps;
 } SpriteData;
 
 typedef struct Animation {
     Sprite sprite;
     int frame;
-    float timer;
-    float frame_duration;
+    int timer;
+    int frame_duration;
 
-    Animation(Sprite sprite);
-    void update(float delta);
+    Animation() {
+        sprite = SPRITE_COUNT;
+        frame = 0;
+        timer = 0;
+        frame_duration = 0;
+    };
+    Animation(Sprite sprite, int frame_duration);
+    void update();
+    void reset();
 } Animation;
 
 extern SpriteData sprite_data[SPRITE_COUNT];
+extern int sprite_frame_count[SPRITE_COUNT];
 extern const int TILE_SIZE;

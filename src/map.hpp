@@ -4,7 +4,8 @@
 #include "vector.hpp"
 
 typedef struct Actor {
-    Sprite sprite;
+    Animation animation;
+    int facing_direction;
     vec2 position;
     vec2 target;
 } Actor;
