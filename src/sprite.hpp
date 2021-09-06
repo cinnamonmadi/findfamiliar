@@ -1,6 +1,8 @@
 #pragma once
 
 typedef enum Sprite {
+    SPRITE_FONT,
+    SPRITE_UI_FRAME,
     SPRITE_TILES,
     SPRITE_PLAYER,
     SPRITE_COUNT

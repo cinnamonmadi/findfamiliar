@@ -1,8 +1,8 @@
 #include "engine.hpp"
 
+#include "global.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
 #include <string>
 #include <iostream>
 
@@ -25,9 +25,6 @@ float deltas = 0.0f;
 int fps = 0;
 float delta = 0.0f;
 float dps = 0.0f;
-
-// Fonts
-TTF_Font* debug_font;
 
 // Textures
 SDL_Texture* sprite_texture[SPRITE_COUNT];
@@ -91,11 +88,6 @@ bool engine_init(int argc, char** argv) {
         return false;
     }
 
-    if(TTF_Init() == -1){
-        std::cout << "Unable to initialize SDL_ttf! SDL Error: " << TTF_GetError() << std::endl;
-        return false;
-    }
-
     if(!window || !renderer){
         std::cout << "Unable to initial engine!" << std::endl;
         return false;
@@ -106,7 +98,7 @@ bool engine_init(int argc, char** argv) {
         engine_toggle_fullscreen();
     }
 
-    if(!engine_fonts_init() || !engine_sprite_textures_init()) {
+    if(!engine_sprite_textures_init()) {
         return false;
     }
 
@@ -114,29 +106,13 @@ bool engine_init(int argc, char** argv) {
 }
 
 void engine_quit() {
-    engine_fonts_quit();
     engine_sprite_textures_quit();
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
 
-    TTF_Quit();
     IMG_Quit();
     SDL_Quit();
-}
-
-bool engine_fonts_init() {
-    debug_font = TTF_OpenFont("./res/hack.ttf", 10);
-    if(debug_font == NULL) {
-        std::cout << "Unable to initialize font! SDL Error: " << TTF_GetError() << std::endl;
-        return false;
-    }
-
-    return true;
-}
-
-void engine_fonts_quit() {
-    TTF_CloseFont(debug_font);
 }
 
 bool engine_sprite_textures_init() {
@@ -219,32 +195,52 @@ void engine_render_present() {
     SDL_RenderPresent(renderer);
 }
 
-void engine_render_text(const char* text, SDL_Color color, int x, int y) {
-    SDL_Surface* text_surface = TTF_RenderText_Solid(debug_font, text, color);
-    if(text_surface == NULL) {
-        std::cout << "Unable to render text to surface! SDL Error " << TTF_GetError() << std::endl;
-        return;
+void engine_render_text(const char* text, int x, int y) {
+    int index = 0;
+    while(text[index] != '\0') {
+        int letter_index = (int)(text[index] - ' ');
+        engine_render_sprite_frame(SPRITE_FONT, letter_index, x + (index * 8), y);
+        index++;
     }
+}
 
-    SDL_Texture* text_texture = SDL_CreateTextureFromSurface(renderer, text_surface);
-    if(text_texture == NULL) {
-        std::cout << "Unable to create text texture! SDL Error " << SDL_GetError() << std::endl;
-        return;
+void engine_render_dialog(char* dialog_rows[2], size_t dialog_display_length) {
+    const int width = SCREEN_WIDTH / 8;
+    const int height = 4;
+    const int base_x = 0;
+    const int base_y = SCREEN_HEIGHT - (height * 8);
+    const int row_length = width - 2;
+
+    for(int y = 0; y < height; y++) {
+        for(int x = 0; x < width; x++) {
+            int frame = 4;
+            if(x == 0) {
+                frame--;
+            } else if(x == width - 1) {
+                frame++;
+            }
+            if(y == 0) {
+                frame -= 3;
+            } else if(y == height - 1) {
+                frame += 3;
+            }
+            const int render_x = base_x + (x * 8);
+            const int render_y = base_y + (y * 8);
+
+            if(frame != 4) {
+                engine_render_sprite_frame(SPRITE_UI_FRAME, frame, render_x, render_y);
+            } else {
+                const int row = y - 1;
+                const int col = x - 1;
+                const size_t index = (row * row_length) + col;
+                if(index < dialog_display_length) {
+                    engine_render_sprite_frame(SPRITE_FONT, (int)(dialog_rows[row][col] - ' '), render_x, render_y);
+                } else {
+                    engine_render_sprite_frame(SPRITE_FONT, 0, render_x, render_y);
+                }
+            }
+        }
     }
-
-    SDL_Rect source_rect = (SDL_Rect){ .x = 0, .y = 0, .w = text_surface->w, .h = text_surface->h };
-    SDL_Rect dest_rect = (SDL_Rect){ .x = x, .y = y, .w = text_surface->w, .h = text_surface->h };
-    if(dest_rect.x == RENDER_POSITION_CENTERED) {
-        dest_rect.x = (SCREEN_WIDTH / 2) - (source_rect.w / 2);
-    }
-    if(dest_rect.y == RENDER_POSITION_CENTERED) {
-        dest_rect.y = (SCREEN_HEIGHT / 2) - (source_rect.h / 2);
-    }
-
-    SDL_RenderCopy(renderer, text_texture, &source_rect, &dest_rect);
-
-    SDL_FreeSurface(text_surface);
-    SDL_DestroyTexture(text_texture);
 }
 
 void engine_render_sprite(Sprite sprite, int x, int y) {
@@ -255,7 +251,7 @@ void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y) {
     int frame_long_x = sprite_data[sprite].frame_size[0] * frame;
     SDL_Rect source_rect = (SDL_Rect) {
         .x = frame_long_x % sprite_texture_width[sprite],
-        .y = frame_long_x / sprite_texture_height[sprite],
+        .y = ((int)(frame_long_x / sprite_texture_width[sprite])) * sprite_data[sprite].frame_size[1],
         .w = sprite_data[sprite].frame_size[0],
         .h = sprite_data[sprite].frame_size[1]
     };

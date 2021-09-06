@@ -42,7 +42,6 @@ class Map {
 
         int actor_init(Sprite sprite, int x, int y);
         void actor_move(Actor& actor);
-        void actor_set_target(Actor& actor, const vec2& target_tile);
 
         int npc_init(Sprite sprite, int x, int y, const vec2* path, int path_length);
         void npc_move(NPC& npc);

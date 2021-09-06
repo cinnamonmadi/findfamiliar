@@ -4,6 +4,18 @@ const int TILE_SIZE = 16;
 
 SpriteData sprite_data[SPRITE_COUNT] = {
     (SpriteData) {
+        .path = "./res/gfx/font.png",
+        .frame_size = { 8, 8 },
+        .frame_count = 0,
+        .fps = 1
+    },
+    (SpriteData) {
+        .path = "./res/gfx/frame.png",
+        .frame_size = { 8, 8 },
+        .frame_count = 0,
+        .fps = 1
+    },
+    (SpriteData) {
         .path = "./res/gfx/tiles.png",
         .frame_size = { TILE_SIZE, TILE_SIZE },
         .frame_count = 0,

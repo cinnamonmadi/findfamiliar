@@ -47,6 +47,6 @@ typedef struct vec2 {
     }
 } vec2;
 
-vec2 vec2_null() {
+static inline vec2 vec2_null() {
     return vec2(-1, -1);
 }
