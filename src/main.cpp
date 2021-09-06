@@ -108,14 +108,25 @@ void render() {
 }
 
 void render_map() {
-    for(int y = 0; y < map.tile_height; y++) {
-        for(int x = 0; x < map.tile_width; x++) {
-            engine_render_sprite_frame(SPRITE_TILES, map.tiles[y][x], x * 16, y * 16);
+    vec2 start_tile = tile_at(map.camera_position);
+    vec2 base_render_pos = position_of(start_tile) - map.camera_position;
+    vec2 draw_size = vec2(SCREEN_WIDTH / TILE_SIZE, SCREEN_HEIGHT / TILE_SIZE);
+    if(map.camera_position.x % TILE_SIZE != 0) {
+        draw_size.x++;
+    }
+    if(map.camera_position.y % TILE_SIZE != 0) {
+        draw_size.y++;
+    }
+    for(int y = 0; y < draw_size.y; y++) {
+        for(int x = 0; x < draw_size.x; x++) {
+            vec2 render_pos = base_render_pos + vec2(x * TILE_SIZE, y * TILE_SIZE);
+            engine_render_sprite_frame(SPRITE_TILES, map.tiles[start_tile.y + y][start_tile.x + x], render_pos.x, render_pos.y);
         }
     }
 
     for(int i = 0; i < map.actor_count; i++) {
-        engine_render_sprite(map.actors[i].sprite, map.actors[i].position.x, map.actors[i].position.y);
+        vec2 render_pos = map.actors[i].position - map.camera_position;
+        engine_render_sprite(map.actors[i].sprite, render_pos.x, render_pos.y);
     }
 }
 

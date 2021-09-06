@@ -26,6 +26,9 @@ class Map {
         int tile_width;
         int tile_height;
 
+        vec2 camera_position;
+        vec2 camera_max_position;
+
         Actor actors[MAX_ACTORS];
         int actor_count;
 
@@ -39,6 +42,7 @@ class Map {
 
         void update(int player_input_direction);
         void update_move_player(int player_input_direction);
+        void update_camera();
 
         int actor_init(Sprite sprite, int x, int y);
         void actor_move(Actor& actor);
