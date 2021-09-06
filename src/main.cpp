@@ -61,7 +61,7 @@ void input() {
 void input_handle_keydown(int key) {
     if(key == SDLK_x) {
         if(!ui.dialog_is_open) {
-            ui.dialog_open("Hello this is a message.\n And this is a much longer message, let's take a look at it shall we?");
+            ui.dialog_open("Hello this is a message. And this is a much longer message, let's take a look at it shall we?");
         } else {
             ui.dialog_progress();
         }

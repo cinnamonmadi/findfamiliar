@@ -66,7 +66,7 @@ void UI::dialog_pop_next_lines() {
         if(space_index == std::string::npos) {
             next_word_size = dialog_message.length();
         } else {
-            next_word_size = space_index + 1;
+            next_word_size = space_index;
         }
 
         // Check if we have space on this line for that word
@@ -84,11 +84,16 @@ void UI::dialog_pop_next_lines() {
 
         // Fill the row buffer with the word
         for(char& c : next_word) {
-            if(c == '\n') {
-                return;
-            }
             dialog_rows[row][col] = c;
             col++;
+        }
+
+        if(space_index != std::string::npos) {
+            dialog_message = dialog_message.substr(1, dialog_message.length() - 1);
+            if(col < DIALOG_ROW_LENGTH) {
+                dialog_rows[row][col] = ' ';
+                col++;
+            }
         }
     }
 }
