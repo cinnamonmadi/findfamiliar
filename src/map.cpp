@@ -41,6 +41,7 @@ Map::Map() {
     actor_count = 0;
     actor_init(SPRITE_PLAYER, 5, 2);
 
+    npc_count = 0;
     PathNode path[2] = {
         (PathNode) {
             .position = vec2(3, 6),
@@ -54,6 +55,8 @@ Map::Map() {
         }
     };
     npc_init(SPRITE_PLAYER, 6, 6, (char*)"I'm looking for wild mushrooms!", path, 2);
+
+    npc_being_talked_to = -1;
 }
 
 Map::~Map() {
@@ -92,6 +95,9 @@ void Map::update(int player_input_direction) {
     update_camera();
 
     for(int i = 0; i < npc_count; i++) {
+        if(npc_being_talked_to == i) {
+            continue;
+        }
         npc_move(npcs[i]);
     }
 }
@@ -156,6 +162,7 @@ char* Map::player_interact() {
         }
         if(interact_target.equals(actors[npcs[i].actor].position)) {
             actors[npcs[i].actor].facing_direction = direction_opposite_of(player_actor.facing_direction);
+            npc_being_talked_to = i;
             return npcs[i].dialog;
         }
     }

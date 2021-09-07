@@ -67,6 +67,9 @@ void input_handle_keydown(int key) {
             }
         } else {
             ui.dialog_progress();
+            if(!ui.dialog_is_open) {
+                map.npc_being_talked_to = -1;
+            }
         }
     }
 

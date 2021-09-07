@@ -44,6 +44,8 @@ class Map {
         NPC npcs[MAX_NPCS];
         int npc_count;
 
+        int npc_being_talked_to;
+
         Map();
         ~Map();
 
