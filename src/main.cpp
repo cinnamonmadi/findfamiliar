@@ -61,7 +61,10 @@ void input() {
 void input_handle_keydown(int key) {
     if(key == SDLK_x) {
         if(!ui.dialog_is_open) {
-            ui.dialog_open("Hello this is a message. And this is a much longer message, let's take a look at it shall we?");
+            char* new_dialog = map.player_interact();
+            if(new_dialog != NULL) {
+                ui.dialog_open(new_dialog);
+            }
         } else {
             ui.dialog_progress();
         }
@@ -93,7 +96,11 @@ void input_handle_keyup(int key) {
 }
 
 void update() {
-    map.update(player_input_direction);
+    int player_input = -1;
+    if(!ui.dialog_is_open) {
+        player_input = player_input_direction;
+    }
+    map.update(player_input);
     ui.update();
 }
 

@@ -41,8 +41,19 @@ Map::Map() {
     actor_count = 0;
     actor_init(SPRITE_PLAYER, 5, 2);
 
-    vec2 path[2] = { vec2(3, 6), vec2(6, 6) };
-    npc_init(SPRITE_PLAYER, 6, 6, path, 2);
+    PathNode path[2] = {
+        (PathNode) {
+            .position = vec2(3, 6),
+            .wait_time = 120,
+            .wait_direction = 2
+        },
+        (PathNode) {
+            .position = vec2(6, 6),
+            .wait_time = 120,
+            .wait_direction = 2
+        }
+    };
+    npc_init(SPRITE_PLAYER, 6, 6, (char*)"I'm looking for wild mushrooms!", path, 2);
 }
 
 Map::~Map() {
@@ -94,6 +105,8 @@ void Map::update_move_player(int player_input_direction) {
         vec2 next_tile = tile_at(player_actor.position) + directions[player_input_direction];
         if(is_tile_free(next_tile)) {
             player_actor.target = position_of(next_tile);
+        } else {
+            player_actor.facing_direction = player_input_direction;
         }
     }
 }
@@ -122,6 +135,32 @@ void Map::update_camera() {
     } else if(camera_position.y > camera_max_position.y) {
         camera_position.y = camera_max_position.y;
     }
+}
+
+char* Map::player_interact() {
+    Actor& player_actor = actors[PLAYER_ACTOR];
+    if(!player_actor.target.is_null()) {
+        return NULL;
+    }
+
+    vec2 interact_target = position_of(tile_at(player_actor.position) + directions[player_actor.facing_direction]);
+
+    if(interact_target.x < 0 || interact_target.x >= tile_width * TILE_SIZE ||
+       interact_target.y < 0 || interact_target.y >= tile_height * TILE_SIZE) {
+        return NULL;
+    }
+
+    for(int i = 0; i < npc_count; i++) {
+        if(!actors[npcs[i].actor].target.is_null()) {
+            continue;
+        }
+        if(interact_target.equals(actors[npcs[i].actor].position)) {
+            actors[npcs[i].actor].facing_direction = direction_opposite_of(player_actor.facing_direction);
+            return npcs[i].dialog;
+        }
+    }
+
+    return NULL;
 }
 
 int Map::actor_init(Sprite sprite, int x, int y) {
@@ -160,7 +199,7 @@ void Map::actor_move(Actor& actor) {
     actor.animation.update();
 }
 
-int Map::npc_init(Sprite sprite, int x, int y, const vec2* path, int path_length) {
+int Map::npc_init(Sprite sprite, int x, int y, char* dialog, const PathNode* path, int path_length) {
     if(npc_count == MAX_NPCS) {
         std::cout << "Cannot create new NPC! Max NPC count has been reached!" << std::endl;
         return -1;
@@ -168,10 +207,15 @@ int Map::npc_init(Sprite sprite, int x, int y, const vec2* path, int path_length
 
     int npc_index = npc_count;
     npcs[npc_index].actor = actor_init(sprite, x, y);
+    npcs[npc_index].dialog = dialog;
+
     npcs[npc_index].path_index = 0;
     npcs[npc_index].path_length = path_length;
+    npcs[npc_index].path_timer = 0;
+
     for(int i = 0; i < path_length; i++) {
-        npcs[npc_index].path[i] = position_of(path[i]);
+        npcs[npc_index].path[i] = path[i];
+        npcs[npc_index].path[i].position = position_of(npcs[npc_index].path[i].position);
     }
     npc_count++;
 
@@ -179,45 +223,40 @@ int Map::npc_init(Sprite sprite, int x, int y, const vec2* path, int path_length
 }
 
 void Map::npc_move(NPC& npc) {
+    // Don't move if this npc never had a path
     if(npc.path_length == 0) {
         return;
     }
 
-    // Move the actor
     Actor& npc_actor = actors[npc.actor];
-    actor_move(npc_actor);
 
+    // Don't move if this npc is waiting on the current path node
+    if(npc.path_timer > 0) {
+        npc_actor.facing_direction = npc.path[npc.path_index].wait_direction;
+        npc.path_timer--;
+        return;
+    }
+
+    // If we've decided to move, check to make sure we have a target to move towards
     if(npc_actor.target.is_null()) {
-        // Check to see if we've reached the next path node
-        if(npc_actor.position.equals(npc.path[npc.path_index])) {
-            npc.path_index++;
-            if(npc.path_index == npc.path_length) {
-                npc.path_index -= 2;
-            }
-        }
-
-        // Try to move to the next tile along our path
-        int target_direction = npc_actor.position.direction_to(npc.path[npc.path_index]);
+        int target_direction = npc_actor.position.direction_to(npc.path[npc.path_index].position);
         vec2 next_tile = tile_at(npc_actor.position) + directions[target_direction];
         if(is_tile_free(next_tile)) {
             npc_actor.target = position_of(next_tile);
         }
     }
-}
 
-vec2 tile_at(vec2 point) {
-    return vec2((int)(point.x / TILE_SIZE), (int)(point.y / TILE_SIZE));
-}
+    // Now move the actor towards that arget
+    actor_move(npc_actor);
 
-vec2 position_of(vec2 tile) {
-    return vec2(tile.x * TILE_SIZE, tile.y * TILE_SIZE);
-}
+    // If after movement we've reached our target path node, increment the path and start the wait timer if there is one
+    if(npc_actor.target.is_null() && npc_actor.position.equals(npc.path[npc.path_index].position)) {
+        npc.path_timer = npc.path[npc.path_index].wait_time;
+        npc_actor.animation.reset();
 
-bool intersects_tile(const vec2& point, const vec2& tile) {
-    vec2 rect_size = vec2(TILE_SIZE, TILE_SIZE);
-    vec2 tile_pos = position_of(tile);
-    return !(point.x + rect_size.x <= tile_pos.x ||
-             tile_pos.x + rect_size.x <= point.x ||
-             point.y + rect_size.y <= tile_pos.y ||
-             tile_pos.y + rect_size.y <= point.y);
+        npc.path_index++;
+        if(npc.path_index == npc.path_length) {
+            npc.path_index -= 2;
+        }
+    }
 }
