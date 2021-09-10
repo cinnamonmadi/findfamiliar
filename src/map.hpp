@@ -36,7 +36,6 @@ class Map {
         int tile_height;
 
         vec2 camera_position;
-        vec2 camera_max_position;
 
         Actor actors[MAX_ACTORS];
         int actor_count;

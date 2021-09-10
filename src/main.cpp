@@ -27,7 +27,41 @@ void render_map();
 void render_ui();
 
 int main(int argc, char** argv) {
-    if(!engine_init(argc, argv)) {
+    bool init_fullscreened = false;
+    int resolution_width = SCREEN_WIDTH * 4;
+    int resolution_height = SCREEN_HEIGHT * 4;
+
+    // Parse system arguments
+    for(int i = 1; i < argc; i++) {
+        std::string arg = std::string(argv[i]);
+        if(arg == "--fullscreen"){
+            init_fullscreened = true;
+        } else if(arg == "--resolution") {
+            if(i + 1 == argc) {
+                std::cout << "No resolution was specified!" << std::endl;
+                return 0;
+            }
+
+            i++;
+            std::string resolution_input = std::string(argv[i]);
+
+            size_t x_index = resolution_input.find_first_of("x");
+            if(x_index == std::string::npos) {
+                std::cout << "Incorrect resolution format!" << std::endl;
+                return 0;
+            }
+
+            resolution_width = atoi(resolution_input.substr(0, x_index).c_str());
+            resolution_height = atoi(resolution_input.substr(x_index + 1, resolution_input.length() - x_index + 1).c_str());
+
+            if(resolution_width == 0 || resolution_height == 0) {
+                std::cout << "Incorrect resolution format!" << std::endl;
+                return 0;
+            }
+        }
+    }
+
+    if(!engine_init(resolution_width, resolution_height, init_fullscreened)) {
         return 0;
     }
 
@@ -129,6 +163,10 @@ void render_map() {
     }
     for(int y = 0; y < draw_size.y; y++) {
         for(int x = 0; x < draw_size.x; x++) {
+            vec2 tile = start_tile + vec2(x, y);
+            if(tile.x < 0 || tile.x >= map.tile_width || tile.y < 0 || tile.y >= map.tile_height) {
+                continue;
+            }
             vec2 render_pos = base_render_pos + vec2(x * TILE_SIZE, y * TILE_SIZE);
             engine_render_sprite_frame(SPRITE_TILES, map.tiles[start_tile.y + y][start_tile.x + x], render_pos.x, render_pos.y, false);
         }

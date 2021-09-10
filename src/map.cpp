@@ -12,11 +12,6 @@ const vec2 directions[4] = {
     vec2(-1, 0),
 };
 
-const int CAMERA_BOUND_TOP = TILE_SIZE * 3;
-const int CAMERA_BOUND_BOT = SCREEN_HEIGHT - CAMERA_BOUND_TOP;
-const int CAMERA_BOUND_LEFT = TILE_SIZE * 3;
-const int CAMERA_BOUND_RIGHT = SCREEN_WIDTH - CAMERA_BOUND_LEFT;
-
 Map::Map() {
     tile_width = 20;
     tile_height = 18;
@@ -35,8 +30,6 @@ Map::Map() {
             }
         }
     }
-
-    camera_max_position = vec2((tile_width * TILE_SIZE) - SCREEN_WIDTH, (tile_height * TILE_SIZE) - SCREEN_HEIGHT);
 
     actor_count = 0;
     actor_init(SPRITE_PLAYER, 5, 2);
@@ -118,29 +111,7 @@ void Map::update_move_player(int player_input_direction) {
 }
 
 void Map::update_camera() {
-    vec2& player_position = actors[PLAYER_ACTOR].position;
-    vec2 player_screen_position = player_position - camera_position;
-    if(player_screen_position.y < CAMERA_BOUND_TOP) {
-        camera_position.y = player_position.y - CAMERA_BOUND_TOP;
-    } else if(player_screen_position.y > CAMERA_BOUND_BOT) {
-        camera_position.y = player_position.y - CAMERA_BOUND_BOT;
-    }
-    if(player_screen_position.x < CAMERA_BOUND_LEFT) {
-        camera_position.x = player_position.x - CAMERA_BOUND_LEFT;
-    } else if(player_screen_position.x > CAMERA_BOUND_RIGHT) {
-        camera_position.x = player_position.x - CAMERA_BOUND_RIGHT;
-    }
-
-    if(camera_position.x < 0) {
-        camera_position.x = 0;
-    } else if(camera_position.x > camera_max_position.x) {
-        camera_position.x = camera_max_position.x;
-    }
-    if(camera_position.y < 0) {
-        camera_position.y = 0;
-    } else if(camera_position.y > camera_max_position.y) {
-        camera_position.y = camera_max_position.y;
-    }
+    camera_position = actors[PLAYER_ACTOR].position - vec2(TILE_SIZE * 4, TILE_SIZE * 4);
 }
 
 char* Map::player_interact() {

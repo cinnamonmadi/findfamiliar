@@ -3,15 +3,12 @@
 #include "sprite.hpp"
 #include <SDL2/SDL.h>
 
-const SDL_Color COLOR_WHITE = { .r = 255, .g = 255, .b = 255, .a = 255 };
-const int RENDER_POSITION_CENTERED = -1;
-
 // Timing variables
 extern int fps;
 extern float delta;
 extern float dps;
 
-bool engine_init(int argc, char** argv);
+bool engine_init(int resolution_width, int resolution_height, bool init_fullscreened);
 void engine_quit();
 void engine_set_resolution(int width, int height);
 void engine_toggle_fullscreen();

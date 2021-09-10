@@ -38,47 +38,13 @@ void engine_sprite_textures_quit();
 
 // Engine init functions
 
-bool engine_init(int argc, char** argv) {
-    bool init_fullscreened = false;
-    int resolution_width = SCREEN_WIDTH * 4;
-    int resolution_height = SCREEN_HEIGHT * 4;
-
-    // Parse system arguments
-    for(int i = 1; i < argc; i++) {
-        std::string arg = std::string(argv[i]);
-        if(arg == "--fullscreen"){
-            init_fullscreened = true;
-        } else if(arg == "--resolution") {
-            if(i + 1 == argc) {
-                std::cout << "No resolution was specified!" << std::endl;
-                return false;
-            }
-
-            i++;
-            std::string resolution_input = std::string(argv[i]);
-
-            size_t x_index = resolution_input.find_first_of("x");
-            if(x_index == std::string::npos) {
-                std::cout << "Incorrect resolution format!" << std::endl;
-                return false;
-            }
-
-            resolution_width = atoi(resolution_input.substr(0, x_index).c_str());
-            resolution_height = atoi(resolution_input.substr(x_index + 1, resolution_input.length() - x_index + 1).c_str());
-
-            if(resolution_width == 0 || resolution_height == 0) {
-                std::cout << "Incorrect resolution format!" << std::endl;
-                return false;
-            }
-        }
-    }
-
+bool engine_init(int resolution_width, int resolution_height, bool init_fullscreened) {
     if(SDL_Init(SDL_INIT_VIDEO) < 0){
         std::cout << "Unable to initialize SDL! SDL Error: " << SDL_GetError() << std::endl;
         return false;
     }
 
-    window = SDL_CreateWindow("Highlands", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    window = SDL_CreateWindow("Find Familiar", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
     int img_flags = IMG_INIT_PNG;
