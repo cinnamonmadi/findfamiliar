@@ -1,44 +1,40 @@
 #include "engine.hpp"
 
-#include "global.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <string>
 #include <iostream>
 
-// Constants
-const int SCREEN_WIDTH = 160;
-const int SCREEN_HEIGHT = 144;
 const float FRAME_DURATION = 1.0f / 60.0f;
 
-// Engine variables
-SDL_Window* window;
-SDL_Renderer* renderer;
-bool engine_is_fullscreen = false;
+// Sprite data
+typedef struct SpriteData {
+    const char* path;
+    const int frame_size[2];
+} SpriteData;
 
-// Timing variables
-float last_frame_time = 0.0f;
-float last_update_time = 0.0f;
-float last_second_time = 0.0f;
-int frames = 0;
-float deltas = 0.0f;
-int fps = 0;
-float delta = 0.0f;
-float dps = 0.0f;
-
-// Textures
-SDL_Texture* sprite_texture[SPRITE_COUNT];
-int sprite_texture_width[SPRITE_COUNT];
-int sprite_texture_height[SPRITE_COUNT];
-
-bool engine_fonts_init();
-void engine_fonts_quit();
-bool engine_sprite_textures_init();
-void engine_sprite_textures_quit();
+const SpriteData sprite_data[SPRITE_COUNT] = {
+    (SpriteData) {
+        .path = "./res/gfx/font.png",
+        .frame_size = { 8, 8 },
+    },
+    (SpriteData) {
+        .path = "./res/gfx/frame.png",
+        .frame_size = { 8, 8 },
+    },
+    (SpriteData) {
+        .path = "./res/gfx/tiles.png",
+        .frame_size = { Engine::TILE_SIZE, Engine::TILE_SIZE },
+    },
+    (SpriteData) {
+        .path = "./res/gfx/witch.png",
+        .frame_size = { Engine::TILE_SIZE, Engine::TILE_SIZE },
+    }
+};
 
 // Engine init functions
 
-bool engine_init(int resolution_width, int resolution_height, bool init_fullscreened) {
+bool Engine::init(int resolution_width, int resolution_height, bool init_fullscreened) {
     if(SDL_Init(SDL_INIT_VIDEO) < 0){
         std::cout << "Unable to initialize SDL! SDL Error: " << SDL_GetError() << std::endl;
         return false;
@@ -59,20 +55,20 @@ bool engine_init(int resolution_width, int resolution_height, bool init_fullscre
         return false;
     }
 
-    engine_set_resolution(resolution_width, resolution_height);
+    set_resolution(resolution_width, resolution_height);
     if(init_fullscreened) {
-        engine_toggle_fullscreen();
+        toggle_fullscreen();
     }
 
-    if(!engine_sprite_textures_init()) {
+    if(!textures_init()) {
         return false;
     }
 
     return true;
 }
 
-void engine_quit() {
-    engine_sprite_textures_quit();
+void Engine::quit() {
+    textures_free();
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
@@ -81,7 +77,7 @@ void engine_quit() {
     SDL_Quit();
 }
 
-bool engine_sprite_textures_init() {
+bool Engine::textures_init() {
     for(int i = 0; i < SPRITE_COUNT; i++) {
         SDL_Surface* loaded_surface = IMG_Load(sprite_data[i].path);
         if(loaded_surface == NULL) {
@@ -105,28 +101,28 @@ bool engine_sprite_textures_init() {
     return true;
 }
 
-void engine_sprite_textures_quit() {
+void Engine::textures_free() {
     for(int i = 0; i < SPRITE_COUNT; i++) {
         SDL_DestroyTexture(sprite_texture[i]);
     }
 }
 
-void engine_set_resolution(int width, int height) {
+void Engine::set_resolution(int width, int height) {
     SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
     SDL_SetWindowSize(window, width, height);
     SDL_SetWindowPosition(window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 }
 
-void engine_toggle_fullscreen() {
-    if (engine_is_fullscreen){
+void Engine::toggle_fullscreen() {
+    if (is_fullscreen){
         SDL_SetWindowFullscreen(window, 0);
     } else {
         SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
     }
-    engine_is_fullscreen = !engine_is_fullscreen;
+    is_fullscreen = !is_fullscreen;
 }
 
-void engine_clock_tick() {
+void Engine::clock_tick() {
     frames++;
     float current_time = SDL_GetTicks() / 1000.0f;
 
@@ -139,7 +135,7 @@ void engine_clock_tick() {
         last_second_time += 1.0;
     }
 
-    // Record the delta time for consistent game logi
+    // Record the delta time for consistent game logic
     delta = current_time - last_update_time;
     deltas += delta;
     last_update_time = current_time;
@@ -151,27 +147,56 @@ void engine_clock_tick() {
     }
 }
 
+// Animation functions
+
+Animation Engine::animation_init(Sprite sprite, int frame_duration) const {
+    return (Animation) {
+        .sprite = sprite,
+        .frame = 0,
+        .timer = 0,
+        .frame_duration = frame_duration
+    };
+}
+
+void Engine::animation_update(Animation& animation) const {
+    animation.timer++;
+
+    if(animation.timer == animation.frame_duration) {
+        animation.frame++;
+        animation.timer -= animation.frame_duration;
+
+        if(animation.frame == sprite_frame_count[animation.sprite]) {
+            animation.frame = 0;
+        }
+    }
+}
+
+void Engine::animation_reset(Animation& animation) const {
+    animation.frame = 0;
+    animation.timer = 0;
+}
+
 // Rendering functions
 
-void engine_render_clear() {
+void Engine::render_clear() {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 }
 
-void engine_render_present() {
+void Engine::render_present() {
     SDL_RenderPresent(renderer);
 }
 
-void engine_render_text(const char* text, int x, int y) {
+void Engine::render_text(const char* text, int x, int y) {
     int index = 0;
     while(text[index] != '\0') {
         int letter_index = (int)(text[index] - ' ');
-        engine_render_sprite_frame(SPRITE_FONT, letter_index, x + (index * 8), y, false);
+        render_sprite_frame(SPRITE_FONT, letter_index, x + (index * 8), y, false);
         index++;
     }
 }
 
-void engine_render_dialog(char* dialog_rows[2], size_t dialog_display_length) {
+void Engine::render_dialog(char* dialog_rows[2], size_t dialog_display_length) {
     const int width = SCREEN_WIDTH / 8;
     const int height = 4;
     const int base_x = 0;
@@ -195,26 +220,26 @@ void engine_render_dialog(char* dialog_rows[2], size_t dialog_display_length) {
             const int render_y = base_y + (y * 8);
 
             if(frame != 4) {
-                engine_render_sprite_frame(SPRITE_UI_FRAME, frame, render_x, render_y, false);
+                render_sprite_frame(SPRITE_UI_FRAME, frame, render_x, render_y, false);
             } else {
                 const int row = y - 1;
                 const int col = x - 1;
                 const size_t index = (row * row_length) + col;
                 if(index < dialog_display_length) {
-                    engine_render_sprite_frame(SPRITE_FONT, (int)(dialog_rows[row][col] - ' '), render_x, render_y, false);
+                    render_sprite_frame(SPRITE_FONT, (int)(dialog_rows[row][col] - ' '), render_x, render_y, false);
                 } else {
-                    engine_render_sprite_frame(SPRITE_FONT, 0, render_x, render_y, false);
+                    render_sprite_frame(SPRITE_FONT, 0, render_x, render_y, false);
                 }
             }
         }
     }
 }
 
-void engine_render_sprite(Sprite sprite, int x, int y) {
-    engine_render_sprite_frame(sprite, 0, x, y, false);
+void Engine::render_sprite(Sprite sprite, int x, int y) {
+    render_sprite_frame(sprite, 0, x, y, false);
 }
 
-void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y, bool flipped) {
+void Engine::render_sprite_frame(Sprite sprite, int frame, int x, int y, bool flipped) {
     int frame_long_x = sprite_data[sprite].frame_size[0] * frame;
     SDL_Rect source_rect = (SDL_Rect) {
         .x = frame_long_x % sprite_texture_width[sprite],
@@ -239,11 +264,11 @@ void engine_render_sprite_frame(Sprite sprite, int frame, int x, int y, bool fli
     SDL_RenderCopyEx(renderer, sprite_texture[sprite], &source_rect, &dest_rect, 0, NULL, flip);
 }
 
-void engine_render_animation(Animation animation, int x, int y) {
-    engine_render_sprite_frame(animation.sprite, animation.frame, x, y, false);
+void Engine::render_animation(Animation animation, int x, int y) {
+    render_sprite_frame(animation.sprite, animation.frame, x, y, false);
 }
 
-void engine_render_actor_animation(Animation animation, int direction, int x, int y) {
+void Engine::render_actor_animation(Animation animation, int direction, int x, int y) {
     int frame = animation.frame;
     if(direction == 0) {
         frame += sprite_frame_count[animation.sprite];
@@ -251,5 +276,5 @@ void engine_render_actor_animation(Animation animation, int direction, int x, in
         frame += sprite_frame_count[animation.sprite] * 2;
     }
 
-    engine_render_sprite_frame(animation.sprite, frame, x, y, direction == 3);
+    render_sprite_frame(animation.sprite, frame, x, y, direction == 3);
 }

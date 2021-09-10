@@ -1,14 +1,14 @@
 #include "ui.hpp"
 
-#include "global.hpp"
 #include <iostream>
 
-const size_t DIALOG_ROW_LENGTH = (SCREEN_WIDTH / 8) - 2;
+const size_t DIALOG_ROW_LENGTH = 18;
 const int DIALOG_TIMER_DURATION = 3;
 
 UI::UI() {
     dialog_rows[0] = new char[DIALOG_ROW_LENGTH];
     dialog_rows[1] = new char[DIALOG_ROW_LENGTH];
+    dialog_is_open = false;
 }
 
 UI::~UI() {

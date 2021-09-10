@@ -1,6 +1,5 @@
 #pragma once
 
-#include "global.hpp"
 #include <string>
 
 class UI {
