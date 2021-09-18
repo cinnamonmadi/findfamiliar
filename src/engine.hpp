@@ -10,11 +10,29 @@ typedef enum Sprite {
     SPRITE_COUNT
 } Sprite;
 
+extern int sprite_frame_count[SPRITE_COUNT];
+extern int sprite_texture_width[SPRITE_COUNT];
+extern int sprite_texture_height[SPRITE_COUNT];
+
 typedef struct Animation {
     Sprite sprite;
     int frame;
     int timer;
     int frame_duration;
+    inline void init(Sprite sprite, int frame_duration) {
+        this->sprite = sprite;
+        this->frame_duration = frame_duration;
+    }
+    inline void reset() {
+        frame = 0;
+        timer = 0;
+    }
+    inline void update() {
+        timer = (timer + 1) % frame_duration;
+        if(timer == 0) {
+            frame = (frame + 1) % sprite_frame_count[sprite];
+        }
+    }
 } Animation;
 
 class Engine {
@@ -60,9 +78,6 @@ class Engine {
         float dps = 0.0f;
 
         SDL_Texture* sprite_texture[SPRITE_COUNT];
-        int sprite_texture_width[SPRITE_COUNT];
-        int sprite_texture_height[SPRITE_COUNT];
-        int sprite_frame_count[SPRITE_COUNT];
 
         bool textures_init();
         void textures_free();

@@ -7,6 +7,10 @@
 
 const float FRAME_DURATION = 1.0f / 60.0f;
 
+int sprite_frame_count[SPRITE_COUNT];
+int sprite_texture_width[SPRITE_COUNT];
+int sprite_texture_height[SPRITE_COUNT];
+
 // Sprite data
 typedef struct SpriteData {
     const char* path;
@@ -236,7 +240,19 @@ void Engine::render_dialog(char* dialog_rows[2], size_t dialog_display_length) {
 }
 
 void Engine::render_sprite(Sprite sprite, int x, int y) {
-    render_sprite_frame(sprite, 0, x, y, false);
+    SDL_Rect source_rect = (SDL_Rect) {
+        .x = 0,
+        .y = 0,
+        .w = sprite_texture_width[sprite],
+        .h = sprite_texture_height[sprite]
+    };
+    SDL_Rect dest_rect = (SDL_Rect) {
+        .x = x,
+        .y = y,
+        .w = source_rect.w,
+        .h = source_rect.h
+    };
+    SDL_RenderCopy(renderer, sprite_texture[sprite], &source_rect, &dest_rect);
 }
 
 void Engine::render_sprite_frame(Sprite sprite, int frame, int x, int y, bool flipped) {

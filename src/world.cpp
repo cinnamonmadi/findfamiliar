@@ -15,31 +15,27 @@ const vec2 directions[4] = {
 
 // World init functions
 
-World::World(Engine* engine) {
-    this->engine = engine;
-
+World::World() {
     input_player_direction = -1;
     for(int i = 0; i < 4; i++) {
         input_direction_held[i] = false;
     }
 
-    map_width = 20;
-    map_height = 18;
+    map.resize(20, 18);
 
-    map_tiles = new int*[map_height];
-    map_walls = new bool*[map_height];
-    for(int y = 0; y < map_height; y++) {
-        map_tiles[y] = new int[map_width];
-        map_walls[y] = new bool[map_width];
-        for(int x = 0; x < map_width; x++) {
-            map_tiles[y][x] = 0;
-            map_walls[y][x] = false;
+    for(int y = 0; y < map.height; y++) {
+        for(int x = 0; x < map.width; x++) {
             if(x == 2) {
-                map_tiles[y][x] = 1;
-                map_walls[y][x] = true;
+                map.set_tile(vec2(x, y), 1);
+                map.set_wall(vec2(x, y), true);
+            } else {
+                map.set_tile(vec2(x, y), 0);
+                map.set_wall(vec2(x, y), false);
             }
         }
     }
+
+    map.load_from_file("./world.map");
 
     actor_count = 0;
     actor_init(SPRITE_PLAYER, 5, 2);
@@ -63,12 +59,6 @@ World::World(Engine* engine) {
 }
 
 World::~World() {
-    for(int y = 0; y < map_height; y++) {
-        delete [] map_tiles[y];
-        delete [] map_walls[y];
-    }
-    delete [] map_tiles;
-    delete [] map_walls;
 }
 
 // World input functions
@@ -139,31 +129,12 @@ void World::update() {
 
 // World render functions
 
-void World::render() {
-    // Render map
-    vec2 start_tile = tile_at(camera_position);
-    vec2 base_render_pos = position_of(start_tile) - camera_position;
-    vec2 draw_size = vec2(Engine::SCREEN_WIDTH / Engine::TILE_SIZE, Engine::SCREEN_HEIGHT / Engine::TILE_SIZE);
-    if(camera_position.x % Engine::TILE_SIZE != 0) {
-        draw_size.x++;
-    }
-    if(camera_position.y % Engine::TILE_SIZE != 0) {
-        draw_size.y++;
-    }
-    for(int y = 0; y < draw_size.y; y++) {
-        for(int x = 0; x < draw_size.x; x++) {
-            vec2 tile = start_tile + vec2(x, y);
-            if(tile.x < 0 || tile.x >= map_width || tile.y < 0 || tile.y >= map_height) {
-                continue;
-            }
-            vec2 render_pos = base_render_pos + vec2(x * Engine::TILE_SIZE, y * Engine::TILE_SIZE);
-            engine->render_sprite_frame(SPRITE_TILES, map_tiles[start_tile.y + y][start_tile.x + x], render_pos.x, render_pos.y, false);
-        }
-    }
+void World::render(Engine* engine) {
+    map.render(engine);
 
     // Render actors
     for(int i = 0; i < actor_count; i++) {
-        vec2 render_pos = actors[i].position - camera_position;
+        vec2 render_pos = actors[i].position - map.camera_position;
         engine->render_actor_animation(actors[i].animation, actors[i].facing_direction, render_pos.x, render_pos.y);
     }
 
@@ -176,9 +147,10 @@ void World::render() {
 // Map functions
 
 bool World::is_tile_free(const vec2& tile) const {
-    if(tile.x < 0 || tile.x >= map_width || tile.y < 0 || tile.y >= map_height) {
+    if(!map.in_bounds(tile)) {
         return false;
     }
+
     for(int i = 0; i < actor_count; i++) {
         if(actors[i].target.is_null()) {
             vec2 position_tile = tile_at(actors[i].position);
@@ -194,7 +166,8 @@ bool World::is_tile_free(const vec2& tile) const {
             }
         }
     }
-    return !map_walls[tile.y][tile.x];
+
+    return !map.get_wall(tile);
 }
 
 // Player functions
@@ -202,7 +175,7 @@ bool World::is_tile_free(const vec2& tile) const {
 void World::player_move() {
     Actor& player_actor = actors[PLAYER_ACTOR];
     actor_move(player_actor);
-    camera_position = player_actor.position - vec2(Engine::TILE_SIZE * 4, Engine::TILE_SIZE * 4);
+    map.camera_position = player_actor.position - vec2(Engine::TILE_SIZE * 4, Engine::TILE_SIZE * 4);
 
     if(player_actor.target.is_null() && input_player_direction != -1) {
         vec2 next_tile = tile_at(player_actor.position) + directions[input_player_direction];
@@ -222,8 +195,7 @@ void World::player_interact() {
 
     vec2 interact_target = position_of(tile_at(player_actor.position) + directions[player_actor.facing_direction]);
 
-    if(interact_target.x < 0 || interact_target.x >= map_width * Engine::TILE_SIZE ||
-       interact_target.y < 0 || interact_target.y >= map_height * Engine::TILE_SIZE) {
+    if(!map.in_bounds(tile_at(interact_target))) {
         return;
     }
 
@@ -254,7 +226,7 @@ int World::actor_init(Sprite sprite, int x, int y) {
         .position = position_of(vec2(x, y)),
         .target = vec2_null()
     };
-    actors[actor_index].animation = engine->animation_init(sprite, 10);
+    actors[actor_index].animation.init(sprite, 10);
     actor_count++;
 
     return actor_index;
@@ -262,7 +234,7 @@ int World::actor_init(Sprite sprite, int x, int y) {
 
 void World::actor_move(Actor& actor) {
     if(actor.target.is_null()) {
-        engine->animation_reset(actor.animation);
+        actor.animation.reset();
         return;
     }
 
@@ -275,7 +247,7 @@ void World::actor_move(Actor& actor) {
     }
 
     actor.facing_direction = move_direction;
-    engine->animation_update(actor.animation);
+    actor.animation.update();
 }
 
 // NPC functions
@@ -333,7 +305,7 @@ void World::npc_move(NPC& npc) {
     // If after movement we've reached our target path node, increment the path and start the wait timer if there is one
     if(npc_actor.target.is_null() && npc_actor.position.equals(npc.path[npc.path_index].position)) {
         npc.path_timer = npc.path[npc.path_index].wait_time;
-        engine->animation_reset(npc_actor.animation);
+        npc_actor.animation.reset();
 
         npc.path_index++;
         if(npc.path_index == npc.path_length) {

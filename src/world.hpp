@@ -1,12 +1,11 @@
 #pragma once
 
-#include <SDL2/SDL.h>
+#include "state.hpp"
 #include "engine.hpp"
+#include "map.hpp"
 #include "ui.hpp"
 #include "vector.hpp"
-
-typedef struct Map {
-} Map;
+#include <SDL2/SDL.h>
 
 typedef struct Actor {
     Animation animation;
@@ -33,28 +32,20 @@ typedef struct NPC {
 static const int MAX_ACTORS = 32;
 static const int MAX_NPCS = 31;
 
-class World {
+class World : public State {
     public:
-        World(Engine* engine);
-        ~World();
+        World();
+        ~World() override;
 
-        void handle_input(SDL_Event e);
-        void update();
-        void render();
+        void handle_input(SDL_Event e) override;
+        void update() override;
+        void render(Engine* engine) override;
     private:
-        Engine* engine;
-
         int input_player_direction;
         bool input_direction_held[4];
 
         UI ui;
-
-        int** map_tiles;
-        bool** map_walls;
-        int map_width;
-        int map_height;
-
-        vec2 camera_position;
+        Map map;
 
         Actor actors[MAX_ACTORS];
         int actor_count;
@@ -73,24 +64,3 @@ class World {
         int npc_init(Sprite sprite, int x, int y, char* dialog, const PathNode* path, int path_length);
         void npc_move(NPC& npc);
 };
-
-inline vec2 tile_at(vec2 point) {
-    return vec2((int)(point.x / Engine::TILE_SIZE), (int)(point.y / Engine::TILE_SIZE));
-}
-
-inline vec2 position_of(vec2 tile) {
-    return vec2(tile.x * Engine::TILE_SIZE, tile.y * Engine::TILE_SIZE);
-}
-
-inline bool intersects_tile(const vec2& point, const vec2& tile) {
-    vec2 rect_size = vec2(Engine::TILE_SIZE, Engine::TILE_SIZE);
-    vec2 tile_pos = position_of(tile);
-    return !(point.x + rect_size.x <= tile_pos.x ||
-             tile_pos.x + rect_size.x <= point.x ||
-             point.y + rect_size.y <= tile_pos.y ||
-             tile_pos.y + rect_size.y <= point.y);
-}
-
-inline int direction_opposite_of(int direction) {
-    return (direction + 2) % 4;
-}
