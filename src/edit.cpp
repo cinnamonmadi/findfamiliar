@@ -40,6 +40,8 @@ void Edit::handle_input(SDL_Event e) {
                 handle_select_tile();
             } else if(tool == TOOL_DRAW) {
                 drawing = true;
+            } else if(tool == TOOL_WALL) {
+                handle_toggle_wall();
             }
         }
     } else if(e.type == SDL_MOUSEBUTTONUP) {
@@ -73,6 +75,9 @@ void Edit::handle_input(SDL_Event e) {
                 break;
             case SDLK_t:
                 tool = TOOL_SELECT_TILE;
+                break;
+            case SDLK_w:
+                tool = TOOL_WALL;
                 break;
             case SDLK_BACKQUOTE:
                 typing = !typing;
@@ -132,13 +137,18 @@ void Edit::render(Engine* engine) {
         SDL_SetRenderDrawColor(engine->renderer, 255, 255, 0, 255);
         SDL_RenderDrawRect(engine->renderer, &tile_rect);
     } else {
-        map.render(engine);
+        map.render_with_walls(engine, tool == TOOL_WALL);
 
-        if(tool == TOOL_DRAW) {
+        if(tool == TOOL_DRAW || tool == TOOL_WALL) {
             vec2 mouse_tile = tile_at(mouse_pos + map.camera_position);
             if(map.in_bounds(mouse_tile)) {
                 vec2 preview_pos = position_of(mouse_tile) - map.camera_position;
-                engine->render_sprite_frame(SPRITE_TILES, selected_tile, preview_pos.x, preview_pos.y, false);
+                if(tool == TOOL_DRAW) {
+                    engine->render_sprite_frame(SPRITE_TILES, selected_tile, preview_pos.x, preview_pos.y, false);
+                } else {
+                    SDL_RenderDrawLine(engine->renderer, preview_pos.x, preview_pos.y, preview_pos.x + Engine::TILE_SIZE, preview_pos.y + Engine::TILE_SIZE);
+                    SDL_RenderDrawLine(engine->renderer, preview_pos.x, preview_pos.y + Engine::TILE_SIZE, preview_pos.x + Engine::TILE_SIZE, preview_pos.y);
+                }
             }
         }
     }
@@ -164,5 +174,12 @@ void Edit::handle_draw_tile() {
     vec2 attempt_draw_tile = tile_at(mouse_pos + map.camera_position);
     if(map.in_bounds(attempt_draw_tile)) {
         map.set_tile(attempt_draw_tile, selected_tile);
+    }
+}
+
+void Edit::handle_toggle_wall() {
+    vec2 attempt_wall_tile = tile_at(mouse_pos + map.camera_position);
+    if(map.in_bounds(attempt_wall_tile)) {
+        map.set_wall(attempt_wall_tile, !map.get_wall(attempt_wall_tile));
     }
 }

@@ -8,7 +8,8 @@
 
 typedef enum EditTool {
     TOOL_DRAW,
-    TOOL_SELECT_TILE
+    TOOL_SELECT_TILE,
+    TOOL_WALL
 } EditTool;
 
 class Edit : public State {
@@ -22,6 +23,7 @@ class Edit : public State {
 
         void handle_select_tile();
         void handle_draw_tile();
+        void handle_toggle_wall();
     private:
         Map map;
 

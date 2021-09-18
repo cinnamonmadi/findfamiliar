@@ -15,6 +15,7 @@ class Map {
         ~Map();
 
         void render(Engine* engine);
+        void render_with_walls(Engine* engine, bool with_walls);
 
         bool in_bounds(vec2 pos) const;
         int get_tile(vec2 pos) const;

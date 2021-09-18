@@ -23,6 +23,12 @@ Map::~Map() {
 }
 
 void Map::render(Engine* engine) {
+    render_with_walls(engine, false);
+}
+
+void Map::render_with_walls(Engine* engine, bool with_walls) {
+    SDL_SetRenderDrawColor(engine->renderer, 255, 0, 0, 255);
+
     // Render map
     vec2 start_tile = tile_at(camera_position);
     vec2 base_render_pos = position_of(start_tile) - camera_position;
@@ -41,6 +47,11 @@ void Map::render(Engine* engine) {
             }
             vec2 render_pos = base_render_pos + vec2(x * Engine::TILE_SIZE, y * Engine::TILE_SIZE);
             engine->render_sprite_frame(SPRITE_TILES, get_tile(tile), render_pos.x, render_pos.y, false);
+
+            if(with_walls && get_wall(tile)) {
+                SDL_RenderDrawLine(engine->renderer, render_pos.x, render_pos.y, render_pos.x + Engine::TILE_SIZE, render_pos.y + Engine::TILE_SIZE);
+                SDL_RenderDrawLine(engine->renderer, render_pos.x, render_pos.y + Engine::TILE_SIZE, render_pos.x + Engine::TILE_SIZE, render_pos.y);
+            }
         }
     }
 }
